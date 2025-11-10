@@ -1,0 +1,172 @@
+import { Router, Response } from 'express';
+import VehicleOrder from '../models/VehicleOrder';
+import { requireAuth, AuthRequest } from '../middleware/auth';
+
+const router = Router();
+
+// Get all vehicle orders
+router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { page = 1, limit = 100, status, orderType } = req.query;
+    const query: any = { createdBy: req.userId };
+    
+    if (status && status !== 'all') {
+      query.orderStatus = status;
+    }
+    
+    // Filter by orderType if provided
+    if (orderType) {
+      query.orderType = orderType;
+    }
+    
+    const orders = await VehicleOrder.find(query)
+      .sort({ orderDate: -1 })
+      .limit(Number(limit) * 1)
+      .skip((Number(page) - 1) * Number(limit));
+    
+    const total = await VehicleOrder.countDocuments(query);
+    
+    res.json({
+      orders,
+      totalPages: Math.ceil(total / Number(limit)),
+      currentPage: Number(page),
+      total
+    });
+  } catch (error) {
+    console.error('Get vehicle orders error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get order by ID
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await VehicleOrder.findOne({ 
+      _id: req.params.id, 
+      createdBy: req.userId 
+    });
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json({ order });
+  } catch (error) {
+    console.error('Get order error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create new order
+router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    // Remove id and _id from request body - MongoDB will generate _id automatically
+    const { id, _id, ...bodyData } = req.body;
+    
+    const orderData = {
+      ...bodyData,
+      createdBy: req.userId,
+      orderDate: req.body.orderDate ? new Date(req.body.orderDate) : new Date(),
+      expectedArrivalDate: req.body.expectedArrivalDate ? new Date(req.body.expectedArrivalDate) : undefined,
+      timeline: req.body.timeline?.map((t: any) => ({
+        ...t,
+        date: new Date(t.date)
+      })) || []
+    };
+    
+    const order = new VehicleOrder(orderData);
+    await order.save();
+    
+    res.status(201).json({
+      message: 'Order created successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Create order error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update order
+router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    // Remove id and _id from request body - these should not be updated
+    const { id, _id, ...bodyData } = req.body;
+    const updateData: any = { ...bodyData };
+    
+    // Convert date strings to Date objects
+    if (updateData.orderDate) updateData.orderDate = new Date(updateData.orderDate);
+    if (updateData.expectedArrivalDate) updateData.expectedArrivalDate = new Date(updateData.expectedArrivalDate);
+    if (updateData.actualArrivalDate) updateData.actualArrivalDate = new Date(updateData.actualArrivalDate);
+    if (updateData.deliveryDate) updateData.deliveryDate = new Date(updateData.deliveryDate);
+    
+    if (updateData.timeline) {
+      updateData.timeline = updateData.timeline.map((t: any) => ({
+        ...t,
+        date: new Date(t.date)
+      }));
+    }
+    
+    const order = await VehicleOrder.findOneAndUpdate(
+      { _id: req.params.id, createdBy: req.userId },
+      updateData,
+      { new: true }
+    );
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json({
+      message: 'Order updated successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Update order error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete order
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const order = await VehicleOrder.findOneAndDelete({
+      _id: req.params.id,
+      createdBy: req.userId
+    });
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    
+    res.json({ message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get order statistics
+router.get('/stats/summary', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const stats = await VehicleOrder.aggregate([
+      { $match: { createdBy: req.userId } },
+      {
+        $group: {
+          _id: '$orderStatus',
+          count: { $sum: 1 },
+          totalAmount: { $sum: '$pricing.totalAmount' }
+        }
+      }
+    ]);
+    
+    res.json({ stats });
+  } catch (error) {
+    console.error('Get stats error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+export default router;
+
+
