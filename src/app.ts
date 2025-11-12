@@ -9,7 +9,7 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "https://singular-unicorn-991992.netlify.app", // your deployed frontend
+      "https://fourwheelerbus.netlify.app", // your deployed frontend
       "http://localhost:3000", // your local React app
     ],
     credentials: true,
