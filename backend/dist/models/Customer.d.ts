@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 export interface ICustomer {
     name: string;
+    title?: 'Mr.' | 'Mrs.' | 'Ms.' | 'Miss' | 'Dr.';
     contact: string;
     email?: string;
     address?: string;

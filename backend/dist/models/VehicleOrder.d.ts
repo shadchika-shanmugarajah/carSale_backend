@@ -13,6 +13,8 @@ export interface IVehicleOrder {
         model: string;
         year: number;
         color: string;
+        chassisNo?: string;
+        engineNo?: string;
         specifications?: string;
     };
     pricing: {
@@ -21,6 +23,17 @@ export interface IVehicleOrder {
         fees: number;
         totalAmount: number;
     };
+    expenses?: {
+        fuel: number;
+        duty: number;
+        driverCharge: number;
+        clearanceCharge: number;
+        demurrage: number;
+        tax: number;
+        customExpenses: {
+            [key: string]: number;
+        };
+    };
     advancePayment: number;
     balanceAmount: number;
     orderStatus: 'pending' | 'confirmed' | 'in_transit' | 'arrived' | 'delivered' | 'cancelled';
@@ -28,11 +41,22 @@ export interface IVehicleOrder {
     actualArrivalDate?: Date;
     deliveryDate?: Date;
     notes?: string;
+    lcAmount?: number;
+    lcNumber?: string;
+    lcBank?: string;
+    grade?: string;
+    biNumber?: string;
+    customBasicInfo?: {
+        [key: string]: string;
+    };
     timeline: {
         date: Date;
         status: string;
         description: string;
     }[];
+    movedToInventory?: boolean;
+    inventoryItemId?: Types.ObjectId;
+    movedToInventoryDate?: Date;
     createdBy?: Types.ObjectId;
 }
 declare const _default: import("mongoose").Model<IVehicleOrder, {}, {}, {}, import("mongoose").Document<unknown, {}, IVehicleOrder> & IVehicleOrder & {

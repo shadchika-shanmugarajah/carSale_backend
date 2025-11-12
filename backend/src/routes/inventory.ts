@@ -59,12 +59,21 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 // Create new item
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    console.log('➕ CREATE INVENTORY');
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔑 chassisNo:', req.body.chassisNo);
+    console.log('🔑 engineNo:', req.body.engineNo);
+    
     const item = new InventoryItem({
       ...req.body,
       createdBy: req.userId
     });
     
     await item.save();
+    
+    console.log('✅ CREATED ITEM:', JSON.stringify(item, null, 2));
+    console.log('✅ Saved chassisNo:', item.chassisNo);
+    console.log('✅ Saved engineNo:', item.engineNo);
     
     res.status(201).json({
       message: 'Inventory item created successfully',
@@ -97,6 +106,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // Update item
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    console.log('🔄 UPDATE INVENTORY - ID:', req.params.id);
+    console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
+    console.log('🔑 chassisNo:', req.body.chassisNo);
+    console.log('🔑 engineNo:', req.body.engineNo);
+    
     const item = await InventoryItem.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.userId },
       req.body,
@@ -106,6 +120,10 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     if (!item) {
       return res.status(404).json({ message: 'Item not found' });
     }
+    
+    console.log('✅ SAVED ITEM:', JSON.stringify(item, null, 2));
+    console.log('✅ Saved chassisNo:', item.chassisNo);
+    console.log('✅ Saved engineNo:', item.engineNo);
     
     res.json({
       message: 'Inventory item updated successfully',

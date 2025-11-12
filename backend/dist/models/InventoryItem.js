@@ -7,6 +7,9 @@ const InventoryItemSchema = new mongoose_1.Schema({
     year: { type: Number, required: true },
     color: { type: String, required: true },
     vin: { type: String, unique: true, sparse: true },
+    chassisNo: { type: String },
+    engineNo: { type: String },
+    grade: { type: String },
     licensePlate: { type: String, unique: true, sparse: true },
     fuelType: {
         type: String,
@@ -27,6 +30,8 @@ const InventoryItemSchema = new mongoose_1.Schema({
     location: { type: String },
     notes: { type: String },
     images: [{ type: String }],
+    sourceOrderId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'VehicleOrder' },
+    sourceOrderNumber: { type: String },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 exports.default = (0, mongoose_1.model)('InventoryItem', InventoryItemSchema);

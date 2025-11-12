@@ -14,6 +14,8 @@ export interface IVehicleOrder {
     model: string;
     year: number;
     color: string;
+    chassisNo?: string;
+    engineNo?: string;
     specifications?: string;
   };
   pricing: {
@@ -22,6 +24,15 @@ export interface IVehicleOrder {
     fees: number;
     totalAmount: number;
   };
+  expenses?: {
+    fuel: number;
+    duty: number;
+    driverCharge: number;
+    clearanceCharge: number;
+    demurrage: number;
+    tax: number;
+    customExpenses: { [key: string]: number };
+  };
   advancePayment: number;
   balanceAmount: number;
   orderStatus: 'pending' | 'confirmed' | 'in_transit' | 'arrived' | 'delivered' | 'cancelled';
@@ -29,11 +40,22 @@ export interface IVehicleOrder {
   actualArrivalDate?: Date;
   deliveryDate?: Date;
   notes?: string;
+  // LC Information
+  lcAmount?: number;
+  lcNumber?: string;
+  lcBank?: string;
+  // Basic Information
+  grade?: string;
+  biNumber?: string;
+  customBasicInfo?: { [key: string]: string };
   timeline: {
     date: Date;
     status: string;
     description: string;
   }[];
+  movedToInventory?: boolean;  // Track if vehicle has been moved to inventory
+  inventoryItemId?: Types.ObjectId;  // Reference to the created inventory item
+  movedToInventoryDate?: Date;  // When it was moved to inventory
   createdBy?: Types.ObjectId;
 }
 
@@ -51,6 +73,8 @@ const VehicleOrderSchema = new Schema<IVehicleOrder>({
     model: { type: String, required: true },
     year: { type: Number, required: true },
     color: { type: String, required: true },
+    chassisNo: { type: String },
+    engineNo: { type: String },
     specifications: { type: String }
   },
   pricing: {
@@ -58,6 +82,15 @@ const VehicleOrderSchema = new Schema<IVehicleOrder>({
     taxes: { type: Number, required: true, default: 0 },
     fees: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true }
+  },
+  expenses: {
+    fuel: { type: Number, default: 0 },
+    duty: { type: Number, default: 0 },
+    driverCharge: { type: Number, default: 0 },
+    clearanceCharge: { type: Number, default: 0 },
+    demurrage: { type: Number, default: 0 },
+    tax: { type: Number, default: 0 },
+    customExpenses: { type: Schema.Types.Mixed, default: {} }
   },
   advancePayment: { type: Number, required: true, default: 0 },
   balanceAmount: { type: Number, required: true },
@@ -70,11 +103,22 @@ const VehicleOrderSchema = new Schema<IVehicleOrder>({
   actualArrivalDate: { type: Date },
   deliveryDate: { type: Date },
   notes: { type: String },
+  // LC Information
+  lcAmount: { type: Number },
+  lcNumber: { type: String },
+  lcBank: { type: String },
+  // Basic Information
+  grade: { type: String },
+  biNumber: { type: String },
+  customBasicInfo: { type: Schema.Types.Mixed },
   timeline: [{
     date: { type: Date, required: true },
     status: { type: String, required: true },
     description: { type: String, required: true }
   }],
+  movedToInventory: { type: Boolean, default: false },
+  inventoryItemId: { type: Schema.Types.ObjectId, ref: 'InventoryItem' },
+  movedToInventoryDate: { type: Date },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 

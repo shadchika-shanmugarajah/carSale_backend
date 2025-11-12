@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const VehicleOrder_1 = __importDefault(require("../models/VehicleOrder"));
+const InventoryItem_1 = __importDefault(require("../models/InventoryItem"));
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.get('/', auth_1.requireAuth, async (req, res) => {
@@ -32,6 +33,74 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
     catch (error) {
         console.error('Get vehicle orders error:', error);
         res.status(500).json({ message: 'Server error' });
+    }
+});
+router.post('/:id/move-to-inventory', auth_1.requireAuth, async (req, res) => {
+    try {
+        const order = await VehicleOrder_1.default.findOne({
+            _id: req.params.id,
+            createdBy: req.userId
+        });
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        if (order.movedToInventory) {
+            return res.status(400).json({
+                message: 'This vehicle has already been moved to inventory',
+                alreadyMoved: true,
+                inventoryItemId: order.inventoryItemId,
+                movedDate: order.movedToInventoryDate
+            });
+        }
+        if (order.orderStatus !== 'arrived') {
+            return res.status(400).json({
+                message: 'Vehicle must be in "arrived" status before moving to inventory',
+                currentStatus: order.orderStatus
+            });
+        }
+        const inventoryData = {
+            model: order.vehicleDetails.model,
+            brand: order.vehicleDetails.brand,
+            year: order.vehicleDetails.year,
+            color: order.vehicleDetails.color,
+            chassisNo: order.vehicleDetails.chassisNo,
+            engineNo: order.vehicleDetails.engineNo,
+            fuelType: 'gasoline',
+            purchasePrice: order.pricing.totalAmount,
+            sellingPrice: order.pricing.totalAmount * 1.15,
+            currency: 'LKR',
+            status: 'available',
+            location: 'Showroom',
+            notes: `Moved from customer order: ${order.orderNumber}`,
+            sourceOrderId: order._id,
+            sourceOrderNumber: order.orderNumber,
+            createdBy: req.userId
+        };
+        const inventoryItem = new InventoryItem_1.default(inventoryData);
+        await inventoryItem.save();
+        order.movedToInventory = true;
+        order.inventoryItemId = inventoryItem._id;
+        order.movedToInventoryDate = new Date();
+        order.orderStatus = 'delivered';
+        order.deliveryDate = new Date();
+        order.timeline.push({
+            date: new Date(),
+            status: 'MOVED_TO_INVENTORY',
+            description: `Vehicle moved to inventory (ID: ${inventoryItem._id})`
+        });
+        await order.save();
+        res.status(201).json({
+            message: 'Vehicle successfully moved to inventory',
+            order,
+            inventoryItem
+        });
+    }
+    catch (error) {
+        console.error('Move to inventory error:', error);
+        res.status(500).json({
+            message: 'Server error',
+            error: error.message
+        });
     }
 });
 router.get('/:id', auth_1.requireAuth, async (req, res) => {

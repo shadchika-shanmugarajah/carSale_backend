@@ -5,6 +5,9 @@ export interface IInventoryItem {
     year: number;
     color: string;
     vin?: string;
+    chassisNo?: string;
+    engineNo?: string;
+    grade?: string;
     licensePlate?: string;
     fuelType: 'gasoline' | 'diesel' | 'hybrid' | 'electric';
     engineSize?: string;
@@ -17,6 +20,8 @@ export interface IInventoryItem {
     location?: string;
     notes?: string;
     images?: string[];
+    sourceOrderId?: Types.ObjectId;
+    sourceOrderNumber?: string;
     createdBy?: Types.ObjectId;
 }
 declare const _default: import("mongoose").Model<IInventoryItem, {}, {}, {}, import("mongoose").Document<unknown, {}, IInventoryItem> & IInventoryItem & {

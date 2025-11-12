@@ -15,6 +15,8 @@ export interface ITransaction {
     year: number;
     color: string;
     vin?: string;
+    chassisNo?: string;
+    engineNo?: string;
     licensePlate?: string;
   };
   pricing: {
@@ -74,6 +76,8 @@ const TransactionSchema = new Schema<ITransaction>({
     year: { type: Number, required: true },
     color: { type: String, required: true },
     vin: { type: String },
+    chassisNo: { type: String },
+    engineNo: { type: String },
     licensePlate: { type: String }
   },
   pricing: {

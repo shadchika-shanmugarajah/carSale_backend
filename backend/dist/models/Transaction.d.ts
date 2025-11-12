@@ -14,6 +14,8 @@ export interface ITransaction {
         year: number;
         color: string;
         vin?: string;
+        chassisNo?: string;
+        engineNo?: string;
         licensePlate?: string;
     };
     pricing: {

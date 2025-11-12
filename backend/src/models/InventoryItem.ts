@@ -5,7 +5,10 @@ export interface IInventoryItem {
   brand: string;
   year: number;
   color: string;
-  vin?: string;
+  vin?: string; // Chassis Number
+  chassisNo?: string; // Alternative field name for Chassis Number
+  engineNo?: string; // Engine Number
+  grade?: string; // Vehicle grade (e.g., Premium, Standard, S, L)
   licensePlate?: string;
   fuelType: 'gasoline' | 'diesel' | 'hybrid' | 'electric';
   engineSize?: string;
@@ -18,6 +21,8 @@ export interface IInventoryItem {
   location?: string;
   notes?: string;
   images?: string[];
+  sourceOrderId?: Types.ObjectId;  // Reference to the source vehicle order (if moved from order)
+  sourceOrderNumber?: string;  // Order number for easy reference
   createdBy?: Types.ObjectId;
 }
 
@@ -26,7 +31,10 @@ const InventoryItemSchema = new Schema<IInventoryItem>({
   brand: { type: String, required: true },
   year: { type: Number, required: true },
   color: { type: String, required: true },
-  vin: { type: String, unique: true, sparse: true },
+  vin: { type: String, unique: true, sparse: true }, // Chassis Number
+  chassisNo: { type: String }, // Alternative field for Chassis Number
+  engineNo: { type: String }, // Engine Number
+  grade: { type: String }, // Vehicle grade
   licensePlate: { type: String, unique: true, sparse: true },
   fuelType: { 
     type: String, 
@@ -47,6 +55,8 @@ const InventoryItemSchema = new Schema<IInventoryItem>({
   location: { type: String },
   notes: { type: String },
   images: [{ type: String }],
+  sourceOrderId: { type: Schema.Types.ObjectId, ref: 'VehicleOrder' },
+  sourceOrderNumber: { type: String },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 

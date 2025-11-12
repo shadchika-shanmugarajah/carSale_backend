@@ -24,6 +24,8 @@ const TransactionSchema = new mongoose_1.Schema({
         year: { type: Number, required: true },
         color: { type: String, required: true },
         vin: { type: String },
+        chassisNo: { type: String },
+        engineNo: { type: String },
         licensePlate: { type: String }
     },
     pricing: {

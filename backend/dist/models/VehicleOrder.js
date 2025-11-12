@@ -15,6 +15,8 @@ const VehicleOrderSchema = new mongoose_1.Schema({
         model: { type: String, required: true },
         year: { type: Number, required: true },
         color: { type: String, required: true },
+        chassisNo: { type: String },
+        engineNo: { type: String },
         specifications: { type: String }
     },
     pricing: {
@@ -22,6 +24,15 @@ const VehicleOrderSchema = new mongoose_1.Schema({
         taxes: { type: Number, required: true, default: 0 },
         fees: { type: Number, required: true, default: 0 },
         totalAmount: { type: Number, required: true }
+    },
+    expenses: {
+        fuel: { type: Number, default: 0 },
+        duty: { type: Number, default: 0 },
+        driverCharge: { type: Number, default: 0 },
+        clearanceCharge: { type: Number, default: 0 },
+        demurrage: { type: Number, default: 0 },
+        tax: { type: Number, default: 0 },
+        customExpenses: { type: mongoose_1.Schema.Types.Mixed, default: {} }
     },
     advancePayment: { type: Number, required: true, default: 0 },
     balanceAmount: { type: Number, required: true },
@@ -34,11 +45,20 @@ const VehicleOrderSchema = new mongoose_1.Schema({
     actualArrivalDate: { type: Date },
     deliveryDate: { type: Date },
     notes: { type: String },
+    lcAmount: { type: Number },
+    lcNumber: { type: String },
+    lcBank: { type: String },
+    grade: { type: String },
+    biNumber: { type: String },
+    customBasicInfo: { type: mongoose_1.Schema.Types.Mixed },
     timeline: [{
             date: { type: Date, required: true },
             status: { type: String, required: true },
             description: { type: String, required: true }
         }],
+    movedToInventory: { type: Boolean, default: false },
+    inventoryItemId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'InventoryItem' },
+    movedToInventoryDate: { type: Date },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 exports.default = (0, mongoose_1.model)('VehicleOrder', VehicleOrderSchema);
