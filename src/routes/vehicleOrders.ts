@@ -25,6 +25,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       .limit(Number(limit) * 1)
       .skip((Number(page) - 1) * Number(limit));
     
+    // DEBUG: Log currency in orders
+    console.log('🔍 GET ORDERS - Number of orders:', orders.length);
+    if (orders.length > 0) {
+      console.log('🔍 GET ORDERS - Sample order currencies:');
+      orders.slice(0, 3).forEach(order => {
+        console.log(`  Order ${order.orderNumber}: currency="${order.currency}" (type: ${typeof order.currency})`);
+      });
+    }
+    
     const total = await VehicleOrder.countDocuments(query);
     
     res.json({
@@ -149,6 +158,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     // Remove id and _id from request body - MongoDB will generate _id automatically
     const { id, _id, ...bodyData } = req.body;
     
+    // DEBUG: Log currency received from frontend
+    console.log('🔍 CREATE ORDER - Currency received from frontend:', req.body.currency);
+    console.log('🔍 CREATE ORDER - Full body:', JSON.stringify(req.body, null, 2));
+    
     const orderData = {
       ...bodyData,
       createdBy: req.userId,
@@ -160,8 +173,13 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       })) || []
     };
     
+    console.log('🔍 CREATE ORDER - Currency in orderData before save:', orderData.currency);
+    
     const order = new VehicleOrder(orderData);
     await order.save();
+    
+    console.log('🔍 CREATE ORDER - Currency after save:', order.currency);
+    console.log('✅ Order saved with currency:', order.currency);
     
     res.status(201).json({
       message: 'Order created successfully',
@@ -180,6 +198,10 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id, _id, ...bodyData } = req.body;
     const updateData: any = { ...bodyData };
     
+    // DEBUG: Log currency received from frontend
+    console.log('🔍 UPDATE ORDER - Currency received from frontend:', req.body.currency);
+    console.log('🔍 UPDATE ORDER - bodyData currency:', bodyData.currency);
+    
     // Convert date strings to Date objects
     if (updateData.orderDate) updateData.orderDate = new Date(updateData.orderDate);
     if (updateData.expectedArrivalDate) updateData.expectedArrivalDate = new Date(updateData.expectedArrivalDate);
@@ -193,6 +215,8 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }));
     }
     
+    console.log('🔍 UPDATE ORDER - Currency in updateData before save:', updateData.currency);
+    
     const order = await VehicleOrder.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.userId },
       updateData,
@@ -202,6 +226,9 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+    
+    console.log('🔍 UPDATE ORDER - Currency after save:', order.currency);
+    console.log('✅ Order updated with currency:', order.currency);
     
     res.json({
       message: 'Order updated successfully',

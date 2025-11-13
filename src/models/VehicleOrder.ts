@@ -24,6 +24,7 @@ export interface IVehicleOrder {
     fees: number;
     totalAmount: number;
   };
+  currency?: string;
   expenses?: {
     fuel: number;
     duty: number;
@@ -83,6 +84,7 @@ const VehicleOrderSchema = new Schema<IVehicleOrder>({
     fees: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true }
   },
+  currency: { type: String, default: 'USD' },
   expenses: {
     fuel: { type: Number, default: 0 },
     duty: { type: Number, default: 0 },
