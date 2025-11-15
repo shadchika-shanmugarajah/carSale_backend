@@ -16,6 +16,7 @@ export interface IInventoryItem {
     purchasePrice: number;
     sellingPrice?: number;
     marketValue?: number;
+    advancePayment?: number;
     currency: string;
     status: 'available' | 'reserved' | 'sold';
     location?: string;

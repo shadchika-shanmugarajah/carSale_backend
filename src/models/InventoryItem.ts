@@ -17,6 +17,7 @@ export interface IInventoryItem {
   purchasePrice: number;
   sellingPrice?: number;
   marketValue?: number;
+  advancePayment?: number;  // Advance payment from customer order
   currency: string;
   status: 'available' | 'reserved' | 'sold';
   location?: string;
@@ -48,6 +49,7 @@ const InventoryItemSchema = new Schema<IInventoryItem>({
   purchasePrice: { type: Number, required: true },
   sellingPrice: { type: Number },
   marketValue: { type: Number },
+  advancePayment: { type: Number, default: 0 },  // Advance payment from customer order
   currency: { type: String, default: 'USD' },
   status: { 
     type: String, 

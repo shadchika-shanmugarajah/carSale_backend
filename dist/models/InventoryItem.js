@@ -22,6 +22,7 @@ const InventoryItemSchema = new mongoose_1.Schema({
     purchasePrice: { type: Number, required: true },
     sellingPrice: { type: Number },
     marketValue: { type: Number },
+    advancePayment: { type: Number, default: 0 },
     currency: { type: String, default: 'USD' },
     status: {
         type: String,

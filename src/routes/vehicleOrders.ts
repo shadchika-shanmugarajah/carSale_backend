@@ -91,6 +91,7 @@ router.post('/:id/move-to-inventory', requireAuth, async (req: AuthRequest, res:
       fuelType: 'gasoline' as const,  // Default value
       purchasePrice: order.pricing.totalAmount,
       // sellingPrice intentionally left undefined - to be set manually later
+      advancePayment: order.advancePayment || 0,  // Transfer advance payment from customer order
       currency: 'LKR',
       status: 'available' as const,
       location: 'Showroom',
@@ -99,6 +100,8 @@ router.post('/:id/move-to-inventory', requireAuth, async (req: AuthRequest, res:
       sourceOrderNumber: order.orderNumber,
       createdBy: req.userId
     };
+    
+    console.log(`💰 Transferring advance payment: ${order.advancePayment} → inventory`);
 
     const inventoryItem = new InventoryItem(inventoryData);
     await inventoryItem.save();
