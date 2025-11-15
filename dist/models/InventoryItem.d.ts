@@ -15,6 +15,7 @@ export interface IInventoryItem {
     mileage?: number;
     purchasePrice: number;
     sellingPrice?: number;
+    marketValue?: number;
     currency: string;
     status: 'available' | 'reserved' | 'sold';
     location?: string;

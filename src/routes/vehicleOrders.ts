@@ -90,7 +90,7 @@ router.post('/:id/move-to-inventory', requireAuth, async (req: AuthRequest, res:
       engineNo: order.vehicleDetails.engineNo,    // Transfer engine number
       fuelType: 'gasoline' as const,  // Default value
       purchasePrice: order.pricing.totalAmount,
-      sellingPrice: order.pricing.totalAmount * 1.15,  // 15% markup
+      // sellingPrice intentionally left undefined - to be set manually later
       currency: 'LKR',
       status: 'available' as const,
       location: 'Showroom',

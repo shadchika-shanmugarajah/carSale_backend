@@ -25,6 +25,7 @@ const VehicleOrderSchema = new mongoose_1.Schema({
         fees: { type: Number, required: true, default: 0 },
         totalAmount: { type: Number, required: true }
     },
+    currency: { type: String, default: 'USD' },
     expenses: {
         fuel: { type: Number, default: 0 },
         duty: { type: Number, default: 0 },

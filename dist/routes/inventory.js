@@ -56,10 +56,17 @@ router.post('/', auth_1.requireAuth, async (req, res) => {
         console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
         console.log('🔑 chassisNo:', req.body.chassisNo);
         console.log('🔑 engineNo:', req.body.engineNo);
-        const item = new InventoryItem_1.default({
+        const itemData = {
             ...req.body,
             createdBy: req.userId
-        });
+        };
+        if (!req.body.sellingPrice ||
+            req.body.sellingPrice === 0 ||
+            (req.body.purchasePrice && Math.abs(req.body.sellingPrice - (req.body.purchasePrice * 1.15)) < 0.01)) {
+            delete itemData.sellingPrice;
+            console.log('🚫 Removed auto-calculated or empty sellingPrice');
+        }
+        const item = new InventoryItem_1.default(itemData);
         await item.save();
         console.log('✅ CREATED ITEM:', JSON.stringify(item, null, 2));
         console.log('✅ Saved chassisNo:', item.chassisNo);
@@ -93,7 +100,20 @@ router.put('/:id', auth_1.requireAuth, async (req, res) => {
         console.log('📦 Request body:', JSON.stringify(req.body, null, 2));
         console.log('🔑 chassisNo:', req.body.chassisNo);
         console.log('🔑 engineNo:', req.body.engineNo);
-        const item = await InventoryItem_1.default.findOneAndUpdate({ _id: req.params.id, createdBy: req.userId }, req.body, { new: true, runValidators: true });
+        const updateData = { ...req.body };
+        const unsetFields = {};
+        if (!req.body.sellingPrice ||
+            req.body.sellingPrice === 0 ||
+            (req.body.purchasePrice && Math.abs(req.body.sellingPrice - (req.body.purchasePrice * 1.15)) < 0.01)) {
+            delete updateData.sellingPrice;
+            unsetFields.sellingPrice = "";
+            console.log('🚫 Removed auto-calculated or empty sellingPrice from update');
+        }
+        const updateOperation = { $set: updateData };
+        if (Object.keys(unsetFields).length > 0) {
+            updateOperation.$unset = unsetFields;
+        }
+        const item = await InventoryItem_1.default.findOneAndUpdate({ _id: req.params.id, createdBy: req.userId }, updateOperation, { new: true, runValidators: true });
         if (!item) {
             return res.status(404).json({ message: 'Item not found' });
         }

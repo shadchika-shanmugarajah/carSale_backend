@@ -64,10 +64,21 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     console.log('🔑 chassisNo:', req.body.chassisNo);
     console.log('🔑 engineNo:', req.body.engineNo);
     
-    const item = new InventoryItem({
+    // Prepare item data - only include sellingPrice if explicitly provided and greater than 0
+    const itemData: any = {
       ...req.body,
       createdBy: req.userId
-    });
+    };
+    
+    // Remove sellingPrice if it's undefined, null, 0, or looks auto-calculated (15% markup)
+    if (!req.body.sellingPrice || 
+        req.body.sellingPrice === 0 ||
+        (req.body.purchasePrice && Math.abs(req.body.sellingPrice - (req.body.purchasePrice * 1.15)) < 0.01)) {
+      delete itemData.sellingPrice;
+      console.log('🚫 Removed auto-calculated or empty sellingPrice');
+    }
+    
+    const item = new InventoryItem(itemData);
     
     await item.save();
     
@@ -111,9 +122,28 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     console.log('🔑 chassisNo:', req.body.chassisNo);
     console.log('🔑 engineNo:', req.body.engineNo);
     
+    // Prepare update data - only include sellingPrice if explicitly provided and greater than 0
+    const updateData: any = { ...req.body };
+    const unsetFields: any = {};
+    
+    // Remove sellingPrice if it's undefined, null, 0, or looks auto-calculated (15% markup)
+    if (!req.body.sellingPrice || 
+        req.body.sellingPrice === 0 ||
+        (req.body.purchasePrice && Math.abs(req.body.sellingPrice - (req.body.purchasePrice * 1.15)) < 0.01)) {
+      delete updateData.sellingPrice;
+      unsetFields.sellingPrice = "";  // Mark for removal from database
+      console.log('🚫 Removed auto-calculated or empty sellingPrice from update');
+    }
+    
+    // Build the update operation
+    const updateOperation: any = { $set: updateData };
+    if (Object.keys(unsetFields).length > 0) {
+      updateOperation.$unset = unsetFields;
+    }
+    
     const item = await InventoryItem.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.userId },
-      req.body,
+      updateOperation,
       { new: true, runValidators: true }
     );
     

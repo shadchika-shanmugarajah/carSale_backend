@@ -22,6 +22,13 @@ router.get('/', auth_1.requireAuth, async (req, res) => {
             .sort({ orderDate: -1 })
             .limit(Number(limit) * 1)
             .skip((Number(page) - 1) * Number(limit));
+        console.log('🔍 GET ORDERS - Number of orders:', orders.length);
+        if (orders.length > 0) {
+            console.log('🔍 GET ORDERS - Sample order currencies:');
+            orders.slice(0, 3).forEach(order => {
+                console.log(`  Order ${order.orderNumber}: currency="${order.currency}" (type: ${typeof order.currency})`);
+            });
+        }
         const total = await VehicleOrder_1.default.countDocuments(query);
         res.json({
             orders,
@@ -67,7 +74,6 @@ router.post('/:id/move-to-inventory', auth_1.requireAuth, async (req, res) => {
             engineNo: order.vehicleDetails.engineNo,
             fuelType: 'gasoline',
             purchasePrice: order.pricing.totalAmount,
-            sellingPrice: order.pricing.totalAmount * 1.15,
             currency: 'LKR',
             status: 'available',
             location: 'Showroom',
@@ -122,6 +128,8 @@ router.get('/:id', auth_1.requireAuth, async (req, res) => {
 router.post('/', auth_1.requireAuth, async (req, res) => {
     try {
         const { id, _id, ...bodyData } = req.body;
+        console.log('🔍 CREATE ORDER - Currency received from frontend:', req.body.currency);
+        console.log('🔍 CREATE ORDER - Full body:', JSON.stringify(req.body, null, 2));
         const orderData = {
             ...bodyData,
             createdBy: req.userId,
@@ -132,8 +140,11 @@ router.post('/', auth_1.requireAuth, async (req, res) => {
                 date: new Date(t.date)
             })) || []
         };
+        console.log('🔍 CREATE ORDER - Currency in orderData before save:', orderData.currency);
         const order = new VehicleOrder_1.default(orderData);
         await order.save();
+        console.log('🔍 CREATE ORDER - Currency after save:', order.currency);
+        console.log('✅ Order saved with currency:', order.currency);
         res.status(201).json({
             message: 'Order created successfully',
             order
@@ -148,6 +159,8 @@ router.put('/:id', auth_1.requireAuth, async (req, res) => {
     try {
         const { id, _id, ...bodyData } = req.body;
         const updateData = { ...bodyData };
+        console.log('🔍 UPDATE ORDER - Currency received from frontend:', req.body.currency);
+        console.log('🔍 UPDATE ORDER - bodyData currency:', bodyData.currency);
         if (updateData.orderDate)
             updateData.orderDate = new Date(updateData.orderDate);
         if (updateData.expectedArrivalDate)
@@ -162,10 +175,13 @@ router.put('/:id', auth_1.requireAuth, async (req, res) => {
                 date: new Date(t.date)
             }));
         }
+        console.log('🔍 UPDATE ORDER - Currency in updateData before save:', updateData.currency);
         const order = await VehicleOrder_1.default.findOneAndUpdate({ _id: req.params.id, createdBy: req.userId }, updateData, { new: true });
         if (!order) {
             return res.status(404).json({ message: 'Order not found' });
         }
+        console.log('🔍 UPDATE ORDER - Currency after save:', order.currency);
+        console.log('✅ Order updated with currency:', order.currency);
         res.json({
             message: 'Order updated successfully',
             order

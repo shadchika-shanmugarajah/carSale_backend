@@ -16,6 +16,7 @@ export interface IInventoryItem {
   mileage?: number;
   purchasePrice: number;
   sellingPrice?: number;
+  marketValue?: number;
   currency: string;
   status: 'available' | 'reserved' | 'sold';
   location?: string;
@@ -46,6 +47,7 @@ const InventoryItemSchema = new Schema<IInventoryItem>({
   mileage: { type: Number },
   purchasePrice: { type: Number, required: true },
   sellingPrice: { type: Number },
+  marketValue: { type: Number },
   currency: { type: String, default: 'USD' },
   status: { 
     type: String, 

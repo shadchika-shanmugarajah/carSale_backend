@@ -23,6 +23,7 @@ export interface IVehicleOrder {
         fees: number;
         totalAmount: number;
     };
+    currency?: string;
     expenses?: {
         fuel: number;
         duty: number;
