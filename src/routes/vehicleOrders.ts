@@ -20,17 +20,22 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       query.orderType = orderType;
     }
     
+    // Use lean() to get plain JavaScript objects instead of Mongoose documents
+    // This ensures all nested fields (like expenses.lcCharge) are properly serialized
     const orders = await VehicleOrder.find(query)
       .sort({ orderDate: -1 })
       .limit(Number(limit) * 1)
-      .skip((Number(page) - 1) * Number(limit));
+      .skip((Number(page) - 1) * Number(limit))
+      .lean(); // Convert to plain objects for proper JSON serialization
     
     // DEBUG: Log currency in orders
     console.log('🔍 GET ORDERS - Number of orders:', orders.length);
     if (orders.length > 0) {
       console.log('🔍 GET ORDERS - Sample order currencies:');
-      orders.slice(0, 3).forEach(order => {
+      orders.slice(0, 3).forEach((order: any) => {
         console.log(`  Order ${order.orderNumber}: currency="${order.currency}" (type: ${typeof order.currency})`);
+        console.log(`  📋 LC CHARGE DEBUG - Order ${order.orderNumber}: expenses.lcCharge="${order.expenses?.lcCharge}" (type: ${typeof order.expenses?.lcCharge})`);
+        console.log(`  📋 LC CHARGE DEBUG - Full expenses:`, JSON.stringify(order.expenses, null, 2));
       });
     }
     
@@ -139,14 +144,19 @@ router.post('/:id/move-to-inventory', requireAuth, async (req: AuthRequest, res:
 // Get order by ID
 router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Use lean() to get plain JavaScript object for proper JSON serialization
     const order = await VehicleOrder.findOne({ 
       _id: req.params.id, 
       createdBy: req.userId 
-    });
+    }).lean();
     
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+    
+    console.log(`📋 LC CHARGE DEBUG - GET BY ID (${req.params.id}):`);
+    console.log(`  expenses.lcCharge:`, order?.expenses?.lcCharge, 'type:', typeof order?.expenses?.lcCharge);
+    console.log(`  Full expenses:`, JSON.stringify(order?.expenses, null, 2));
     
     res.json({ order });
   } catch (error) {
@@ -164,9 +174,49 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     // DEBUG: Log currency received from frontend
     console.log('🔍 CREATE ORDER - Currency received from frontend:', req.body.currency);
     console.log('🔍 CREATE ORDER - Full body:', JSON.stringify(req.body, null, 2));
+    console.log('📋 LC CHARGE DEBUG - expenses.lcCharge received:', req.body.expenses?.lcCharge, 'type:', typeof req.body.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - Full expenses object:', JSON.stringify(req.body.expenses, null, 2));
+    console.log('📋 LC CHARGE DEBUG - Full req.body:', JSON.stringify(req.body, null, 2).substring(0, 1000));
+    
+    // Explicitly construct expenses object to ensure all fields are preserved
+    const expenses = req.body.expenses ? {
+      fuel: Number(req.body.expenses.fuel) || 0,
+      duty: Number(req.body.expenses.duty) || 0,
+      driverCharge: Number(req.body.expenses.driverCharge) || 0,
+      clearanceCharge: Number(req.body.expenses.clearanceCharge) || 0,
+      demurrage: Number(req.body.expenses.demurrage) || 0,
+      tax: Number(req.body.expenses.tax) || 0,
+      lcCharge: (() => {
+        const value = req.body.expenses.lcCharge;
+        if (value !== undefined && value !== null && value !== '') {
+          const numValue = Number(value);
+          console.log('📋 LC CHARGE DEBUG - Raw value:', value, 'type:', typeof value, 'converted:', numValue);
+          return isNaN(numValue) ? 0 : numValue;
+        }
+        console.log('📋 LC CHARGE DEBUG - Value is undefined/null/empty, defaulting to 0');
+        return 0;
+      })(),
+      customExpenses: req.body.expenses.customExpenses || {}
+    } : {
+      fuel: 0,
+      duty: 0,
+      driverCharge: 0,
+      clearanceCharge: 0,
+      demurrage: 0,
+      tax: 0,
+      lcCharge: 0,
+      customExpenses: {}
+    };
+    
+    console.log('📋 LC CHARGE DEBUG - Constructed expenses object:', JSON.stringify(expenses, null, 2));
+    console.log('📋 LC CHARGE DEBUG - expenses.lcCharge in constructed object:', expenses.lcCharge);
+    
+    // Remove expenses from bodyData to avoid conflicts, then explicitly set it
+    const { expenses: _, ...bodyDataWithoutExpenses } = bodyData;
     
     const orderData = {
-      ...bodyData,
+      ...bodyDataWithoutExpenses,
+      expenses: expenses, // Explicitly set the constructed expenses object
       createdBy: req.userId,
       orderDate: req.body.orderDate ? new Date(req.body.orderDate) : new Date(),
       expectedArrivalDate: req.body.expectedArrivalDate ? new Date(req.body.expectedArrivalDate) : undefined,
@@ -177,16 +227,48 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     };
     
     console.log('🔍 CREATE ORDER - Currency in orderData before save:', orderData.currency);
+    console.log('📋 LC CHARGE DEBUG - expenses.lcCharge in orderData:', orderData.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - Full orderData.expenses:', JSON.stringify(orderData.expenses, null, 2));
     
+    // CRITICAL: Mark expenses as modified to ensure Mongoose saves nested object changes
     const order = new VehicleOrder(orderData);
+    console.log('📋 LC CHARGE DEBUG - Before save, order.expenses?.lcCharge:', order.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - orderData.expenses before creating model:', JSON.stringify(orderData.expenses, null, 2));
+    
+    // Explicitly set expenses to ensure it's saved
+    if (orderData.expenses) {
+      order.expenses = orderData.expenses;
+      order.markModified('expenses'); // Tell Mongoose this nested object was modified
+    }
+    
+    console.log('📋 LC CHARGE DEBUG - After setting expenses, order.expenses?.lcCharge:', order.expenses?.lcCharge);
+    
     await order.save();
     
     console.log('🔍 CREATE ORDER - Currency after save:', order.currency);
     console.log('✅ Order saved with currency:', order.currency);
+    console.log('📋 LC CHARGE DEBUG - expenses.lcCharge after save:', order.expenses?.lcCharge, 'type:', typeof order.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - Full expenses after save:', JSON.stringify(order.expenses, null, 2));
+    
+    // Verify the saved document - fetch fresh from DB to ensure all fields are included
+    // Use lean() to get plain JavaScript object instead of Mongoose document
+    const savedOrder = await VehicleOrder.findById(order._id).lean();
+    console.log('📋 LC CHARGE DEBUG - Retrieved from DB, expenses.lcCharge:', savedOrder?.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - Full saved order expenses:', JSON.stringify(savedOrder?.expenses, null, 2));
+    
+    // Also check raw MongoDB document
+    const rawDoc = await VehicleOrder.collection.findOne({ _id: order._id });
+    console.log('📋 LC CHARGE DEBUG - Raw MongoDB document expenses.lcCharge:', rawDoc?.expenses?.lcCharge);
+    console.log('📋 LC CHARGE DEBUG - Raw MongoDB document expenses:', JSON.stringify(rawDoc?.expenses, null, 2));
+    
+    // Return the freshly fetched order to ensure all fields are included
+    // Convert to plain object if it's a Mongoose document
+    const orderToReturn = savedOrder || (order.toObject ? order.toObject() : order);
+    console.log('📋 LC CHARGE DEBUG - Order being returned, expenses.lcCharge:', orderToReturn?.expenses?.lcCharge);
     
     res.status(201).json({
       message: 'Order created successfully',
-      order
+      order: orderToReturn
     });
   } catch (error) {
     console.error('Create order error:', error);
@@ -204,6 +286,31 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     // DEBUG: Log currency received from frontend
     console.log('🔍 UPDATE ORDER - Currency received from frontend:', req.body.currency);
     console.log('🔍 UPDATE ORDER - bodyData currency:', bodyData.currency);
+    console.log('📋 LC CHARGE DEBUG - UPDATE: expenses.lcCharge received:', req.body.expenses?.lcCharge, 'type:', typeof req.body.expenses?.lcCharge);
+    
+    // Explicitly handle expenses object if it's being updated
+    if (updateData.expenses && req.body.expenses) {
+      const expenses = {
+        fuel: req.body.expenses.fuel !== undefined ? Number(req.body.expenses.fuel) || 0 : updateData.expenses.fuel || 0,
+        duty: req.body.expenses.duty !== undefined ? Number(req.body.expenses.duty) || 0 : updateData.expenses.duty || 0,
+        driverCharge: req.body.expenses.driverCharge !== undefined ? Number(req.body.expenses.driverCharge) || 0 : updateData.expenses.driverCharge || 0,
+        clearanceCharge: req.body.expenses.clearanceCharge !== undefined ? Number(req.body.expenses.clearanceCharge) || 0 : updateData.expenses.clearanceCharge || 0,
+        demurrage: req.body.expenses.demurrage !== undefined ? Number(req.body.expenses.demurrage) || 0 : updateData.expenses.demurrage || 0,
+        tax: req.body.expenses.tax !== undefined ? Number(req.body.expenses.tax) || 0 : updateData.expenses.tax || 0,
+        lcCharge: (() => {
+          const value = req.body.expenses.lcCharge;
+          if (value !== undefined && value !== null && value !== '') {
+            const numValue = Number(value);
+            console.log('📋 LC CHARGE DEBUG - UPDATE: Raw value:', value, 'converted:', numValue);
+            return isNaN(numValue) ? 0 : numValue;
+          }
+          return updateData.expenses.lcCharge || 0;
+        })(),
+        customExpenses: req.body.expenses.customExpenses || updateData.expenses.customExpenses || {}
+      };
+      updateData.expenses = expenses;
+      console.log('📋 LC CHARGE DEBUG - UPDATE: Constructed expenses:', JSON.stringify(expenses, null, 2));
+    }
     
     // Convert date strings to Date objects
     if (updateData.orderDate) updateData.orderDate = new Date(updateData.orderDate);
@@ -219,6 +326,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     }
     
     console.log('🔍 UPDATE ORDER - Currency in updateData before save:', updateData.currency);
+    console.log('📋 LC CHARGE DEBUG - UPDATE: expenses.lcCharge in updateData:', updateData.expenses?.lcCharge);
     
     const order = await VehicleOrder.findOneAndUpdate(
       { _id: req.params.id, createdBy: req.userId },
@@ -232,6 +340,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     
     console.log('🔍 UPDATE ORDER - Currency after save:', order.currency);
     console.log('✅ Order updated with currency:', order.currency);
+    console.log('📋 LC CHARGE DEBUG - UPDATE: expenses.lcCharge after save:', order.expenses?.lcCharge);
     
     res.json({
       message: 'Order updated successfully',

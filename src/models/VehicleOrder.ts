@@ -32,6 +32,7 @@ export interface IVehicleOrder {
     clearanceCharge: number;
     demurrage: number;
     tax: number;
+    lcCharge: number;
     customExpenses: { [key: string]: number };
   };
   advancePayment: number;
@@ -92,6 +93,7 @@ const VehicleOrderSchema = new Schema<IVehicleOrder>({
     clearanceCharge: { type: Number, default: 0 },
     demurrage: { type: Number, default: 0 },
     tax: { type: Number, default: 0 },
+    lcCharge: { type: Number, default: 0 },
     customExpenses: { type: Schema.Types.Mixed, default: {} }
   },
   advancePayment: { type: Number, required: true, default: 0 },

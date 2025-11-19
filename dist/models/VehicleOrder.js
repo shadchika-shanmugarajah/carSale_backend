@@ -33,6 +33,7 @@ const VehicleOrderSchema = new mongoose_1.Schema({
         clearanceCharge: { type: Number, default: 0 },
         demurrage: { type: Number, default: 0 },
         tax: { type: Number, default: 0 },
+        lcCharge: { type: Number, default: 0 },
         customExpenses: { type: mongoose_1.Schema.Types.Mixed, default: {} }
     },
     advancePayment: { type: Number, required: true, default: 0 },

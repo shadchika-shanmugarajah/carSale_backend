@@ -31,6 +31,7 @@ export interface IVehicleOrder {
         clearanceCharge: number;
         demurrage: number;
         tax: number;
+        lcCharge: number;
         customExpenses: {
             [key: string]: number;
         };
